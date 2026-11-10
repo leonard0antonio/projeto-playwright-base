@@ -22,7 +22,7 @@ test.describe("Cenários de uso com visual_user", () => {
     expect(src).toContain('sl-404');
   });
 
-  test('Deve validar o layout da página usando Screenshot (Regressão Visual)', async ({ page }) => {
+  test('Deve validar o layout da página usando Screenshot (Regressão Visual) @visual', async ({ page }) => {
     // Foca apenas na área dos produtos para não pegar variações do navegador inteiro
     const listaProdutos = page.locator('.inventory_list');
     
@@ -34,7 +34,7 @@ test.describe("Cenários de uso com visual_user", () => {
       await expect(listaProdutos).toHaveScreenshot('layout-produtos.png', { maxDiffPixels: 2000 });
   });
 
-  test('Deve capturar erro de alinhamento no botão de adicionar ao carrinho', async ({ page }) => {
+  test('Deve capturar erro de alinhamento no botão de adicionar ao carrinho @visual', async ({ page }) => {
     // O visual_user bagunça o CSS de vários botões. Vamos focar apenas no botão da mochila.
     const botaoAdicionar = page.locator('[data-test="add-to-cart-sauce-labs-backpack"]');
     
@@ -42,7 +42,7 @@ test.describe("Cenários de uso com visual_user", () => {
     await expect(botaoAdicionar).toHaveScreenshot('botao-mochila-layout.png');
   });
 
-  test('Deve capturar o layout quebrado na página do carrinho', async ({ page }) => {
+  test('Deve capturar o layout quebrado na página do carrinho @visual', async ({ page }) => {
     // Adiciona o item e navega para o carrinho
     await page.locator('[data-test="add-to-cart-sauce-labs-backpack"]').click();
     await page.locator('.shopping_cart_link').click();
@@ -55,4 +55,3 @@ test.describe("Cenários de uso com visual_user", () => {
   });
 
 });
-

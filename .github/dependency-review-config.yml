@@ -1,34 +1,14 @@
 # Dependency Review Configuration
 # https://github.com/actions/dependency-review-action#configuration-options
 
-# Fail the build if any vulnerabilities are found with these severities
+# Fail on high or critical vulnerabilities and allow only these SPDX licenses.
 fail-on-severity: high
-
-# Allow specific GHSA IDs (GitHub Security Advisories) that are false positives
-allow-ghsas: []
-
-# Configuration for license scanning
-licenses:
-  allow:
-    - MIT
-    - Apache-2.0
-    - BSD-2-Clause
-    - BSD-3-Clause
-    - ISC
-    - CC0-1.0
-    - Unlicense
-    - Zlib
-  deny:
-    - GPL-3.0-only
-    - AGPL-3.0-only
-
-# Scope configuration
-scope:
-  # Include devDependencies in the review
-  include-dev: true
-  # Include optionalDependencies
-  include-optional: true
-
-# Package managers to scan
-package-managers:
-  - npm
+allow-licenses:
+  - MIT
+  - Apache-2.0
+  - BSD-2-Clause
+  - BSD-3-Clause
+  - ISC
+  - CC0-1.0
+  - Unlicense
+  - Zlib

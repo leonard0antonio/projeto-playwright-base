@@ -127,6 +127,7 @@ jobs:
           npx playwright test \
             --project=${{ matrix.browser }} \
             --shard=${{ matrix.shard }} \
+            --grep-invert="@visual" \
             --reporter=line,github,html \
             --output=test-results/${{ matrix.browser }}-${{ matrix.shard_name }}
         env:
@@ -190,6 +191,7 @@ jobs:
         run: |
           npx playwright test \
             --project="${{ matrix.project }}" \
+            --grep-invert="@visual" \
             --reporter=line,github,html \
             --output=test-results/mobile-${{ matrix.project }}
         env:
@@ -211,7 +213,7 @@ jobs:
   visual-regression:
     name: Visual Regression
     needs: quality-gates
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     timeout-minutes: 30
     if: github.event_name == 'pull_request' && !github.event.pull_request.draft
     steps:
@@ -236,7 +238,7 @@ jobs:
         run: npm ci --prefer-offline --no-audit
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
 
       - name: Run visual regression tests
         run: |

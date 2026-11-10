@@ -22,14 +22,35 @@ export default defineConfig({
   /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 1 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: 'html',
+  reporter: process.env.CI
+    ? [['line'], ['github'], ['html', { outputFolder: 'playwright-report' }]]
+    : 'html',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('')`. */
-    // baseURL: 'http://localhost:3000',
+    baseURL: process.env.BASE_URL || 'https://www.saucedemo.com',
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
+
+    /* Screenshot on failure */
+    screenshot: 'only-on-failure',
+
+    /* Video on failure */
+    video: 'retain-on-failure',
+
+    /* Global timeout for each test */
+    actionTimeout: 15000,
+    navigationTimeout: 30000,
+  },
+
+  /* Expect timeout for assertions */
+  expect: {
+    timeout: 10000,
+    toHaveScreenshot: {
+      maxDiffPixels: 100,
+      threshold: 0.2,
+    },
   },
 
   /* Configure projects for major browsers */
@@ -50,14 +71,14 @@ export default defineConfig({
     },
 
     /* Test against mobile viewports. */
-    // {
-    //   name: 'Mobile Chrome',
-    //   use: { ...devices['Pixel 5'] },
-    // },
-    // {
-    //   name: 'Mobile Safari',
-    //   use: { ...devices['iPhone 12'] },
-    // },
+    {
+      name: 'Mobile Chrome',
+      use: { ...devices['Pixel 5'] },
+    },
+    {
+      name: 'Mobile Safari',
+      use: { ...devices['iPhone 12'] },
+    },
 
     /* Test against branded browsers. */
     // {
@@ -76,4 +97,15 @@ export default defineConfig({
   //   url: 'http://localhost:3000',
   //   reuseExistingServer: !process.env.CI,
   // },
+
+  /* Global setup and teardown */
+  // globalSetup: require.resolve('./tests/global-setup.ts'),
+  // globalTeardown: require.resolve('./tests/global-teardown.ts'),
+
+  /* Test metadata for reporting */
+  metadata: {
+    'Test Environment': process.env.TEST_ENV || 'local',
+    'Build Number': process.env.GITHUB_RUN_NUMBER || 'local',
+    'Commit SHA': process.env.GITHUB_SHA || 'local',
+  },
 });

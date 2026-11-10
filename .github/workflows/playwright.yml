@@ -77,15 +77,19 @@ jobs:
           - browser: chromium
             node: '20.x'
             shard: 1/2
+            shard_name: '1-of-2'
           - browser: chromium
             node: '20.x'
             shard: 2/2
+            shard_name: '2-of-2'
           - browser: firefox
             node: '20.x'
             shard: 1/1
+            shard_name: '1-of-1'
           - browser: webkit
             node: '20.x'
             shard: 1/1
+            shard_name: '1-of-1'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -124,19 +128,19 @@ jobs:
             --project=${{ matrix.browser }} \
             --shard=${{ matrix.shard }} \
             --reporter=line,github,html \
-            --output=test-results/${{ matrix.browser }}-${{ matrix.shard }}
+            --output=test-results/${{ matrix.browser }}-${{ matrix.shard_name }}
         env:
           CI: true
-          PLAYWRIGHT_HTML_REPORT: playwright-report/${{ matrix.browser }}-${{ matrix.shard }}
+          PLAYWRIGHT_HTML_REPORT: playwright-report/${{ matrix.browser }}-${{ matrix.shard_name }}
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-${{ matrix.browser }}-${{ matrix.shard }}
+          name: test-results-${{ matrix.browser }}-${{ matrix.shard_name }}
           path: |
-            test-results/${{ matrix.browser }}-${{ matrix.shard }}/
-            playwright-report/${{ matrix.browser }}-${{ matrix.shard }}/
+            test-results/${{ matrix.browser }}-${{ matrix.shard_name }}/
+            playwright-report/${{ matrix.browser }}-${{ matrix.shard_name }}/
           retention-days: 30
           compression-level: 6
 
@@ -144,7 +148,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: traces-${{ matrix.browser }}-${{ matrix.shard }}
+          name: traces-${{ matrix.browser }}-${{ matrix.shard_name }}
           path: test-results/**/trace.zip
           retention-days: 7
 

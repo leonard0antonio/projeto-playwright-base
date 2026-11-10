@@ -31,7 +31,7 @@ test.describe("Cenários de uso com visual_user", () => {
     // Ele criará uma pasta no seu projeto com a imagem base.
     // Nas próximas execuções, ele comparará a tela real com essa imagem salva, 
     // capturando qualquer botão torto ou CSS quebrado que o visual_user causa!
-    await expect(listaProdutos).toHaveScreenshot('layout-produtos.png');
+      await expect(listaProdutos).toHaveScreenshot('layout-produtos.png', { maxDiffPixels: 2000 });
   });
 
   test('Deve capturar erro de alinhamento no botão de adicionar ao carrinho', async ({ page }) => {

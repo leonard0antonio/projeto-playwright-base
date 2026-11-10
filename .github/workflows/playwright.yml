@@ -13,11 +13,6 @@ on:
         type: choice
         options: [ staging, production ]
         default: staging
-      browser:
-        description: 'Browser to run'
-        type: choice
-        options: [ all, chromium, firefox, webkit ]
-        default: all
 
 env:
   NODE_VERSION: '20.x'
@@ -94,12 +89,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Skip if browser not selected
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.browser != 'all' && github.event.inputs.browser != matrix.browser
-        run: |
-          echo "Skipping ${{ matrix.browser }} - not selected in workflow_dispatch"
-          exit 0
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -169,12 +158,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Skip if browser not selected
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.browser != 'all'
-        run: |
-          echo "Skipping mobile tests - not selected in workflow_dispatch"
-          exit 0
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -222,12 +205,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Skip if browser not selected
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.browser != 'all' && github.event.inputs.browser != 'chromium'
-        run: |
-          echo "Skipping visual regression - not selected in workflow_dispatch"
-          exit 0
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -249,7 +226,6 @@ jobs:
             --output=test-results/visual
         env:
           CI: true
-          PLAYWRIGHT_UPDATE_SNAPSHOTS: ${{ github.event_name == 'workflow_dispatch' }}
 
       - name: Upload visual regression results
         if: always()
@@ -273,12 +249,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Skip if browser not selected
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.browser != 'all' && github.event.inputs.browser != 'chromium'
-        run: |
-          echo "Skipping performance tests - not selected in workflow_dispatch"
-          exit 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

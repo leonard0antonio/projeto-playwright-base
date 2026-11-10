@@ -70,7 +70,6 @@ jobs:
     needs: quality-gates
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    if: ${{ github.event.inputs.browser == 'all' || github.event.inputs.browser == matrix.browser || github.event_name != 'workflow_dispatch' }}
     strategy:
       fail-fast: false
       matrix:
@@ -90,6 +89,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Skip if browser not selected
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.browser != 'all' && github.event.inputs.browser != matrix.browser
+        run: |
+          echo "Skipping ${{ matrix.browser }} - not selected in workflow_dispatch"
+          exit 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -151,7 +156,6 @@ jobs:
     needs: quality-gates
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    if: ${{ github.event.inputs.browser == 'all' || github.event_name != 'workflow_dispatch' }}
     strategy:
       fail-fast: false
       matrix:
@@ -159,6 +163,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Skip if browser not selected
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.browser != 'all'
+        run: |
+          echo "Skipping mobile tests - not selected in workflow_dispatch"
+          exit 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -199,12 +209,18 @@ jobs:
     needs: quality-gates
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    if: github.event_name == 'pull_request' && !github.event.pull_request.draft && (github.event.inputs.browser == 'all' || github.event.inputs.browser == 'chromium' || github.event_name != 'workflow_dispatch')
+    if: github.event_name == 'pull_request' && !github.event.pull_request.draft
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Skip if browser not selected
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.browser != 'all' && github.event.inputs.browser != 'chromium'
+        run: |
+          echo "Skipping visual regression - not selected in workflow_dispatch"
+          exit 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -247,10 +263,16 @@ jobs:
     needs: quality-gates
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.browser == 'all' || github.event.inputs.browser == 'chromium'))
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Skip if browser not selected
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.browser != 'all' && github.event.inputs.browser != 'chromium'
+        run: |
+          echo "Skipping performance tests - not selected in workflow_dispatch"
+          exit 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -370,7 +392,7 @@ jobs:
         with:
           payload: |
             {
-              "text": "${{ steps.status.outputs.emoji }} Playwright Tests ${{ steps.status.outputs.status | upper }}",
+              "text": "${{ steps.status.outputs.emoji }} Playwright Tests ${{ steps.status.outputs.status }}",
               "blocks": [
                 {
                   "type": "section",
@@ -384,7 +406,7 @@ jobs:
                   "fields": [
                     { "type": "mrkdwn", "text": "*Branch:* ${{ github.ref_name }}" },
                     { "type": "mrkdwn", "text": "*Commit:* ${{ github.sha }}" },
-                    { "type": "mrkdwn", "text": "*Status:* ${{ steps.status.outputs.status | upper }}" },
+                    { "type": "mrkdwn", "text": "*Status:* ${{ steps.status.outputs.status }}" },
                     { "type": "mrkdwn", "text": "*Actor:* ${{ github.actor }}" }
                   ]
                 },
@@ -424,9 +446,9 @@ jobs:
             const summary = `## 🎭 Playwright Test Summary
             | Job | Status |
             |-----|--------|
-            | Desktop Tests | ${{ needs.test.result == 'skipped' ? '⏭️ skipped' : needs.test.result }} |
-            | Mobile Tests | ${{ needs.test-mobile.result == 'skipped' ? '⏭️ skipped' : needs.test-mobile.result }} |
-            | Visual Regression | ${{ needs.visual-regression.result == 'skipped' ? '⏭️ skipped' : needs.visual-regression.result }} |
+            | Desktop Tests | ${{ needs.test.result == 'skipped' && '⏭️ skipped' || needs.test.result }} |
+            | Mobile Tests | ${{ needs.test-mobile.result == 'skipped' && '⏭️ skipped' || needs.test-mobile.result }} |
+            | Visual Regression | ${{ needs.visual-regression.result == 'skipped' && '⏭️ skipped' || needs.visual-regression.result }} |
             | Performance | ${{ needs.performance.result || 'skipped' }} |
             
             [View Full Report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts)
@@ -454,7 +476,7 @@ jobs:
   deploy-staging:
     name: Deploy to Staging
     needs: [ aggregate-reports, notify ]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/develop' && (needs.test.result == 'success' || needs.test.result == 'skipped')
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop' && (needs.test.result == 'success' || needs.test.result == 'skipped' || needs.test-mobile.result == 'success' || needs.test-mobile.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: staging

@@ -303,7 +303,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Download all blob reports
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: blob-report-*
           path: all-blob-reports

@@ -1,5 +1,7 @@
 # Playwright QA Automation Framework
 
+https://canva.link/wsrugcbnsx8ungr
+
 Framework de testes E2E para o Sauce Demo, usando Playwright Test e GitHub Actions.
 
 ## Requisitos

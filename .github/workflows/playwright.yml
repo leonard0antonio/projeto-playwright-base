@@ -6,6 +6,8 @@ on:
   pull_request:
     branches: [ main, master, develop ]
     types: [ opened, synchronize, reopened, ready_for_review ]
+  schedule:
+    - cron: '0 12 * * 1'
   workflow_dispatch:
     inputs:
       environment:
@@ -112,16 +114,9 @@ jobs:
         run: npx playwright install --with-deps ${{ matrix.browser }}
 
       - name: Run Playwright tests
-        run: |
-          npx playwright test \
-            --project=${{ matrix.browser }} \
-            --shard=${{ matrix.shard }} \
-            --grep-invert="@visual" \
-            --reporter=line,github,html \
-            --output=test-results/${{ matrix.browser }}-${{ matrix.shard_name }}
+        run: npx playwright test --project=${{ matrix.browser }} --shard=${{ matrix.shard }} --grep-invert='@visual|@performance|@mobile' --reporter=line,github,blob --output=test-results/${{ matrix.browser }}-${{ matrix.shard_name }}
         env:
           CI: true
-          PLAYWRIGHT_HTML_REPORT: playwright-report/${{ matrix.browser }}-${{ matrix.shard_name }}
 
       - name: Upload test results
         if: always()
@@ -130,9 +125,16 @@ jobs:
           name: test-results-${{ matrix.browser }}-${{ matrix.shard_name }}
           path: |
             test-results/${{ matrix.browser }}-${{ matrix.shard_name }}/
-            playwright-report/${{ matrix.browser }}-${{ matrix.shard_name }}/
           retention-days: 30
           compression-level: 6
+
+      - name: Upload blob report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blob-report-${{ matrix.browser }}-${{ matrix.shard_name }}
+          path: blob-report/
+          retention-days: 1
 
       - name: Upload trace on failure
         if: failure()
@@ -153,7 +155,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [ 'Mobile Chrome', 'Mobile Safari' ]
+        include:
+          - project: 'Mobile Chrome'
+            slug: mobile-chrome
+          - project: 'Mobile Safari'
+            slug: mobile-safari
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -168,15 +174,10 @@ jobs:
         run: npm ci --prefer-offline --no-audit
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps
+        run: npx playwright install --with-deps chromium webkit
 
       - name: Run mobile tests
-        run: |
-          npx playwright test \
-            --project="${{ matrix.project }}" \
-            --grep-invert="@visual" \
-            --reporter=line,github,html \
-            --output=test-results/mobile-${{ matrix.project }}
+        run: npx playwright test --project="${{ matrix.project }}" --grep="@mobile" --reporter=line,github,blob --output=test-results/${{ matrix.slug }}
         env:
           CI: true
 
@@ -184,11 +185,18 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mobile-test-results-${{ matrix.project }}
+          name: mobile-test-results-${{ matrix.slug }}
           path: |
-            test-results/mobile-${{ matrix.project }}/
-            playwright-report/mobile-${{ matrix.project }}/
+            test-results/${{ matrix.slug }}/
           retention-days: 30
+
+      - name: Upload mobile blob report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blob-report-${{ matrix.slug }}
+          path: blob-report/
+          retention-days: 1
 
   # ==========================================
   # VISUAL REGRESSION - Chromium only
@@ -218,12 +226,7 @@ jobs:
         run: npx playwright install chromium
 
       - name: Run visual regression tests
-        run: |
-          npx playwright test \
-            --project=chromium \
-            --grep="@visual" \
-            --reporter=line,github,html \
-            --output=test-results/visual
+        run: npx playwright test --project=chromium --grep="@visual" --reporter=line,github,blob --output=test-results/visual
         env:
           CI: true
 
@@ -232,10 +235,16 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: visual-regression-results
-          path: |
-            test-results/visual/
-            playwright-report/visual/
+          path: test-results/visual/
           retention-days: 30
+
+      - name: Upload visual blob report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blob-report-visual
+          path: blob-report/
+          retention-days: 1
 
   # ==========================================
   # PERFORMANCE TESTS - Optional, on schedule or manual
@@ -263,12 +272,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run performance tests
-        run: |
-          npx playwright test \
-            --project=chromium \
-            --grep="@performance" \
-            --reporter=line,github,html \
-            --output=test-results/performance
+        run: npx playwright test --project=chromium --grep="@performance" --reporter=line,github,blob --output=test-results/performance
         env:
           CI: true
 
@@ -277,38 +281,50 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: performance-results
-          path: |
-            test-results/performance/
-            playwright-report/performance/
+          path: test-results/performance/
           retention-days: 30
+
+      - name: Upload performance blob report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blob-report-performance
+          path: blob-report/
+          retention-days: 1
 
   # ==========================================
   # AGGREGATE REPORTS - Merge all results
   # ==========================================
   aggregate-reports:
     name: Aggregate Reports
-    needs: [ test, test-mobile, visual-regression, performance ]
-    if: always() && (needs.test.result != 'skipped' || needs.test-mobile.result != 'skipped' || needs.visual-regression.result != 'skipped' || needs.performance.result != 'skipped')
+    needs: [ quality-gates, test, test-mobile, visual-regression, performance ]
+    if: always() && needs.quality-gates.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Download all test artifacts
+      - name: Download all blob reports
         uses: actions/download-artifact@v4
         with:
-          pattern: test-results-*
-          path: all-results
+          pattern: blob-report-*
+          path: all-blob-reports
           merge-multiple: true
 
-      - name: Download all report artifacts
-        uses: actions/download-artifact@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          pattern: playwright-report-*
-          path: all-reports
-          merge-multiple: true
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
 
       - name: Merge HTML reports
-        run: |
-          npx playwright merge-reports --reporter=html ./all-reports/*/playwright-report ./merged-report
+        run: npx playwright merge-reports --reporter=html all-blob-reports
+        env:
+          PLAYWRIGHT_HTML_OUTPUT_DIR: merged-report
 
       - name: Upload merged report
         uses: actions/upload-artifact@v4
@@ -321,26 +337,26 @@ jobs:
         run: |
           echo "## Test Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Browser | Status | Duration |" >> $GITHUB_STEP_SUMMARY
-          echo "|---------|--------|----------|" >> $GITHUB_STEP_SUMMARY
-          for dir in all-results/*/; do
-            browser=$(basename "$dir")
-            if [ -f "$dir/test-results.json" ]; then
-              status=$(jq -r '.stats.expected // "unknown"' "$dir/test-results.json")
-              duration=$(jq -r '.stats.duration // 0' "$dir/test-results.json")
-              echo "| $browser | $status | ${duration}ms |" >> $GITHUB_STEP_SUMMARY
-            fi
-          done
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Desktop | ${{ needs.test.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Mobile | ${{ needs.test-mobile.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Visual | ${{ needs.visual-regression.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Performance | ${{ needs.performance.result }} |" >> $GITHUB_STEP_SUMMARY
 
   # ==========================================
   # NOTIFICATIONS - Slack/Teams/Email
   # ==========================================
   notify:
     name: Notify
-    needs: [ aggregate-reports ]
+    needs: [ test, test-mobile, visual-regression, performance, aggregate-reports ]
     if: always() && github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
     steps:
       - name: Determine overall status
         id: status
@@ -348,13 +364,15 @@ jobs:
           TEST_RESULT="${{ needs.test.result }}"
           MOBILE_RESULT="${{ needs.test-mobile.result }}"
           VISUAL_RESULT="${{ needs.visual-regression.result }}"
+          PERFORMANCE_RESULT="${{ needs.performance.result }}"
           
           # Treat skipped as success for overall status
           if [[ "$TEST_RESULT" == "skipped" ]]; then TEST_RESULT="success"; fi
           if [[ "$MOBILE_RESULT" == "skipped" ]]; then MOBILE_RESULT="success"; fi
           if [[ "$VISUAL_RESULT" == "skipped" ]]; then VISUAL_RESULT="success"; fi
+          if [[ "$PERFORMANCE_RESULT" == "skipped" ]]; then PERFORMANCE_RESULT="success"; fi
           
-          if [[ "$TEST_RESULT" == "success" && "$MOBILE_RESULT" == "success" && "$VISUAL_RESULT" == "success" ]]; then
+          if [[ "$TEST_RESULT" == "success" && "$MOBILE_RESULT" == "success" && "$VISUAL_RESULT" == "success" && "$PERFORMANCE_RESULT" == "success" ]]; then
             echo "status=success" >> $GITHUB_OUTPUT
             echo "emoji=✅" >> $GITHUB_OUTPUT
           else
@@ -407,7 +425,7 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
       - name: Comment on PR with summary
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && github.event.pull_request.user.login != 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository
         uses: actions/github-script@v7
         with:
           script: |
@@ -451,8 +469,8 @@ jobs:
   # ==========================================
   deploy-staging:
     name: Deploy to Staging
-    needs: [ aggregate-reports, notify ]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/develop' && (needs.test.result == 'success' || needs.test.result == 'skipped' || needs.test-mobile.result == 'success' || needs.test-mobile.result == 'skipped')
+    needs: [ test, test-mobile, aggregate-reports, notify ]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop' && needs.test.result == 'success' && needs.test-mobile.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: staging
@@ -468,8 +486,8 @@ jobs:
   # ==========================================
   deploy-production:
     name: Deploy to Production
-    needs: [ aggregate-reports, notify ]
-    if: github.event_name == 'workflow_dispatch' && inputs.environment == 'production'
+    needs: [ test, test-mobile, aggregate-reports, notify ]
+    if: github.event_name == 'workflow_dispatch' && inputs.environment == 'production' && needs.test.result == 'success' && needs.test-mobile.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: production

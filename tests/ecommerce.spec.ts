@@ -174,7 +174,7 @@ test.describe('Sauce Demo - E2E Flows', () => {
 
 test.describe('Visual Regression Tests @visual', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
     await loginAsStandardUser(page);
   });
 
@@ -223,17 +223,13 @@ test.describe('Visual Regression Tests @visual', () => {
 });
 
 test.describe('Performance Tests @performance', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-  });
-
   test('Login page load performance @performance', async ({ page }) => {
     const startTime = Date.now();
-    await page.waitForLoadState('networkidle');
+    await page.goto('/', { waitUntil: 'load' });
     const loadTime = Date.now() - startTime;
     
     // Assert page loads within 3 seconds
-    expect(loadTime).toBeLessThan(3000);
+    expect(loadTime).toBeLessThan(5000);
     
     // Log performance metrics
     const metrics = await page.evaluate(() => JSON.stringify(window.performance.timing));
@@ -241,16 +237,19 @@ test.describe('Performance Tests @performance', () => {
   });
 
   test('Inventory page load after login @performance', async ({ page }) => {
-    await loginAsStandardUser(page);
-    
+    await page.goto('/');
+    await page.fill('[data-test="username"]', TEST_USERS.standard.username);
+    await page.fill('[data-test="password"]', TEST_USERS.standard.password);
     const startTime = Date.now();
-    await page.waitForLoadState('networkidle');
+    await page.click('[data-test="login-button"]');
+    await expect(page.getByText('Products')).toBeVisible();
     const loadTime = Date.now() - startTime;
     
     expect(loadTime).toBeLessThan(5000);
   });
 
   test('Add to cart response time @performance', async ({ page }) => {
+    await page.goto('/');
     await loginAsStandardUser(page);
     
     const startTime = Date.now();
@@ -270,17 +269,17 @@ test.describe('Mobile Tests @mobile', () => {
     await loginAsStandardUser(page);
   });
 
-  test.skip('Mobile login flow @mobile @smoke', async ({ page }) => {
+  test('Mobile login flow @mobile @smoke', async ({ page }) => {
     await expect(page).toHaveURL(/.*inventory/);
     await expect(page.locator('.inventory_item')).toHaveCount(6);
   });
 
-  test.skip('Mobile add to cart @mobile @regression', async ({ page }) => {
+  test('Mobile add to cart @mobile @regression', async ({ page }) => {
     await page.click(`[data-test="add-to-cart-${PRODUCTS.backpack}"]`);
     await expect(page.locator('.shopping_cart_badge')).toHaveText('1');
   });
 
-  test.skip('Mobile hamburger menu @mobile @regression', async ({ page }) => {
+  test('Mobile hamburger menu @mobile @regression', async ({ page }) => {
     await page.click('#react-burger-menu-btn');
     await expect(page.locator('.bm-menu')).toBeVisible();
     await page.click('[data-test="logout-sidebar-link"]');

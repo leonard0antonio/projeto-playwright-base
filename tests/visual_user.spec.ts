@@ -5,7 +5,7 @@ test.describe("Cenários de uso com visual_user", () => {
 
   // O beforeEach vai rodar esse trecho antes de CADA teste abaixo
   test.beforeEach(async ({ page }) => {
-    await page.goto("https://www.saucedemo.com/");
+    await page.goto("https://www.saucedemo.com/", { waitUntil: "domcontentloaded" });
     await page.locator('[data-test="username"]').fill("visual_user");
     await page.locator('[data-test="password"]').fill("secret_sauce");
     await page.locator('[data-test="login-button"]').click();

@@ -1,6 +1,8 @@
 # Playwright QA Automation Framework
 
-Framework de testes E2E para o Sauce Demo, usando Playwright Test e GitHub Actions.
+Framework de testes E2E para o [Sauce Demo](https://www.saucedemo.com), usando Playwright Test e GitHub Actions.
+
+Os cenários cobrem autenticação, catálogo de produtos, carrinho e checkout, além de testes visuais, verificações de desempenho, cenários mobile e chamadas de API. Há também testes para os usuários de demonstração `standard_user`, `locked_out_user`, `problem_user`, `error_user`, `visual_user` e `performance_glitch_user`.
 
 ## Requisitos
 
@@ -11,17 +13,25 @@ Framework de testes E2E para o Sauce Demo, usando Playwright Test e GitHub Actio
 
 ```bash
 npm ci
-npx playwright install
-npm test
+npx playwright install chromium
+npm test -- --project=chromium
 ```
 
-O `playwright.config.ts` usa `https://www.saucedemo.com` como URL padrão. Para testar outro ambiente, defina `BASE_URL`.
+O Playwright usa `https://www.saucedemo.com` como URL padrão e precisa de acesso à internet para abrir o site. Para testar outro ambiente compatível, defina `BASE_URL`.
+Sem `--project=chromium`, `npm test` executa os cinco projetos configurados; os snapshots visuais versionados, porém, existem apenas para Chromium no Windows.
+
+No PowerShell:
+
+```powershell
+$env:BASE_URL = "https://seu-ambiente.example"
+npm test
+```
 
 ### Scripts npm
 
 | Comando | Descrição |
 |---|---|
-| `npm test` | Executa todos os projetos e testes |
+| `npm test` | Executa todos os projetos e testes; veja a limitação dos snapshots visuais abaixo |
 | `npm run test:ui` | Abre a interface interativa do Playwright |
 | `npm run test:headed` | Executa os browsers com interface visível |
 | `npm run test:debug` | Abre o depurador do Playwright |
@@ -29,14 +39,16 @@ O `playwright.config.ts` usa `https://www.saucedemo.com` como URL padrão. Para 
 | `npm run test:firefox` | Executa o projeto Firefox |
 | `npm run test:webkit` | Executa o projeto WebKit |
 | `npm run test:mobile` | Executa Mobile Chrome e Mobile Safari |
-| `npm run test:visual` | Executa testes com a tag `@visual` |
+| `npm run test:visual -- --project=chromium` | Executa testes `@visual` no Chromium |
 | `npm run test:performance` | Executa testes com a tag `@performance` |
-| `npm run test:ci` | Executa Playwright com reporters de CI |
+| `npm run test:ci` | Executa os testes com reporters line, GitHub e HTML |
+| `npm run test:shard` | Executa apenas a primeira metade da suíte (shard 1/2) |
 | `npm run report` | Abre o relatório HTML existente |
+| `npm run report:merge` | Combina relatórios blob previamente gerados |
 | `npm run lint` | Executa ESLint localmente |
-| `npm run typecheck` | Executa `tsc --noEmit` |
+| `npm run lint:fix` | Corrige automaticamente problemas suportados pelo ESLint |
 
-Para instalar apenas browsers específicos:
+Para instalar browsers adicionais para executar outros projetos:
 
 ```bash
 npx playwright install chromium
@@ -49,30 +61,36 @@ npx playwright install webkit
 ```text
 .github/
   dependabot.yml
-  dependency-review-config.yml
   workflows/
-    dependency-review.yml
     playwright.yml
 tests/
   ecommerce.spec.ts
   error_user.spec.ts
+  global-setup.ts
+  global-teardown.ts
   locked_out_user.spec.ts
   performance_glitch_user.spec.ts
   problem_user.spec.ts
   standard_user.spec.ts
   visual_user.spec.ts
+  ecommerce.spec.ts-snapshots/
+  visual_user.spec.ts-snapshots/
 playwright.config.ts
 package.json
+package-lock.json
+README.md
 ```
+
+As pastas `test-results/`, `playwright-report/` e `blob-report/` contêm resultados gerados durante a execução e não são versionadas. Os arquivos de setup e teardown existem, mas ainda não estão habilitados no `playwright.config.ts`.
 
 ## Projetos Playwright
 
-O Playwright está configurado para executar nos seguintes projetos:
+O Playwright está configurado para executar em cinco projetos:
 
 - Desktop: Chromium, Firefox e WebKit
 - Mobile: Mobile Chrome (Pixel 5) e Mobile Safari (iPhone 12)
 
-No CI, a matriz desktop executa Chromium em dois shards e Firefox/WebKit em um shard cada. Os testes visuais, de performance e mobile são executados em jobs separados para evitar execução duplicada.
+O CI executa todos os arquivos de teste no projeto Chromium. Para executar Firefox, WebKit ou os projetos mobile localmente, use `npm test -- --project=firefox`, `npm test -- --project=webkit`, `npm test -- --project="Mobile Chrome"` ou `npm test -- --project="Mobile Safari"`. A execução de testes visuais nesses projetos requer snapshots de referência correspondentes, que ainda não estão versionados.
 
 ## Tags e execução local
 
@@ -92,7 +110,10 @@ npx playwright test --grep="@smoke"
 npx playwright test --grep="@visual" --project=chromium
 npx playwright test --grep="@performance" --project=chromium
 npx playwright test --grep="@mobile" --project="Mobile Chrome"
+npx playwright test --grep="@api"
 ```
+
+O cenário `Login API validation` está marcado como ignorado (`test.skip`) no momento. Os testes de screenshot usam referências versionadas nas pastas `*-snapshots`; atualize-as somente após revisar as diferenças.
 
 Para atualizar screenshots de referência localmente no PowerShell:
 
@@ -102,7 +123,7 @@ npx playwright test --grep="@visual" --project=chromium
 Remove-Item Env:PLAYWRIGHT_UPDATE_SNAPSHOTS
 ```
 
-Confira as imagens atualizadas antes de incluí-las no repositório. Os snapshots atuais usam a plataforma Chromium/Windows (`*-chromium-win32.png`); por isso o job visual do GitHub Actions roda em `windows-latest`.
+Confira as imagens atualizadas antes de incluí-las no repositório. Os snapshots atuais usam a plataforma Chromium/Windows (`*-chromium-win32.png`); por isso o GitHub Actions roda em `windows-latest`.
 
 ## Configuração
 
@@ -110,55 +131,56 @@ Confira as imagens atualizadas antes de incluí-las no repositório. Os snapshot
 |---|---|---|
 | `BASE_URL` | URL base do sistema sob teste | `https://www.saucedemo.com` |
 | `CI` | Ativa configurações de CI, incluindo retries | Definida automaticamente no GitHub Actions |
-| `TEST_ENV` | Nome do ambiente incluído nos metadados | `local` |
-
-No PowerShell, defina `BASE_URL` assim:
-
-```powershell
-$env:BASE_URL = "https://seu-ambiente.example"
-npm test
-```
+| `TEST_ENV` | Nome do ambiente incluído nos metadados do relatório | `local` |
 
 Configurações relevantes do Playwright:
 
 - execução paralela dos arquivos de teste;
-- dois retries no CI e nenhum retry local;
+- até dois retries no CI e nenhum retry local;
 - `forbidOnly` no CI para evitar `test.only` acidental;
 - trace na primeira repetição, screenshot em falhas e vídeo retido em falhas;
-- reporters line/GitHub e blob nos jobs de teste; o job agregado gera o HTML final.
+- no CI, reporters line/GitHub e HTML em `playwright-report/`.
+
+O workflow define `CI=true` automaticamente. Para simular localmente no PowerShell:
+
+```powershell
+$env:CI = "true"
+npm test
+Remove-Item Env:CI
+```
 
 ## GitHub Actions
 
 O workflow principal está em `.github/workflows/playwright.yml`.
 
-### Quando executa
+### O que mudou
 
-- Push e pull request para `main`, `master` ou `develop`;
-- execução agendada toda segunda-feira às 12:00 UTC;
-- execução manual por `workflow_dispatch`, com escolha de `staging` ou `production`.
+- O workflow roda em cada push e pull request, em qualquer branch.
+- Um único job no `windows-latest` instala as dependências e o Chromium e executa todos os arquivos de teste com `npx playwright test --project=chromium`.
+- O Windows mantém a compatibilidade com os snapshots Chromium/Windows versionados.
+- Foram removidos os jobs separados e a matriz de browsers, a revisão de dependências, notificações, agregação de relatórios e deploys de exemplo.
 
-### Jobs
+### Acessar o relatório
 
-1. **Quality Gates** — executa ESLint, TypeScript, `npm audit` e verificação de pacotes desatualizados. Atualmente essas verificações são não bloqueantes (`continue-on-error`/`|| true`); falhas são reportadas, mas não impedem os testes seguintes.
-2. **Desktop tests** — Chromium (dois shards), Firefox e WebKit; exclui as tags `@visual`, `@performance` e `@mobile`.
-3. **Mobile tests** — executa apenas testes `@mobile` nos projetos Mobile Chrome e Mobile Safari.
-4. **Visual regression** — executa os testes `@visual` em pull requests não rascunho, no Windows, para corresponder aos snapshots versionados.
-5. **Performance** — executa os testes `@performance` no Chromium em execuções agendadas ou manuais.
-6. **Aggregate Reports** — baixa e combina os relatórios blob gerados pelos jobs em um relatório HTML.
-7. **Notify** — pode publicar no Slack se `SLACK_WEBHOOK_URL` estiver configurado e comenta em pull requests do mesmo repositório, exceto pull requests do Dependabot.
-8. **Deploy staging/production** — os jobs estão apenas como placeholders: no momento imprimem uma mensagem e **não fazem deploy real**. A produção exige execução manual com o ambiente `production`, além do sucesso dos testes desktop e mobile.
+Após a execução, baixe o artifact `playwright-report` na página do workflow em **Actions**. O artifact é mantido por 30 dias e é enviado mesmo quando os testes falham, desde que o relatório tenha sido gerado. Para abri-lo localmente, extraia o artifact na raiz do projeto e execute:
 
-Os resultados, traces e relatórios são publicados como artifacts na execução do workflow. Os relatórios blob intermediários são mantidos por 1 dia; os relatórios finais e resultados são mantidos por até 30 dias, conforme cada job.
+```bash
+npm run report
+```
 
-### Revisão de dependências
-
-O workflow `.github/workflows/dependency-review.yml` roda em pull requests e usa `.github/dependency-review-config.yml` para bloquear vulnerabilidades de severidade alta ou crítica e restringir as licenças permitidas.
-
-Para a action Dependency Review funcionar, habilite o **Dependency graph** nas configurações de segurança do repositório, em **Settings → Advanced Security** (ou **Code security and analysis**, dependendo da interface). A revisão pode não estar disponível em algumas contas/planos.
+O workflow atualmente executa os testes; ele não roda lint/typecheck, não publica notificações e não faz deploy.
+O relatório HTML é gerado diretamente pelo Playwright; o workflow não cria relatórios blob nem combina relatórios de vários jobs.
 
 ### Dependabot
 
-`.github/dependabot.yml` configura atualizações semanais para dependências npm e GitHub Actions. Atualizações major de npm estão ignoradas; atualizações major de GitHub Actions continuam permitidas.
+`.github/dependabot.yml` continua configurando atualizações semanais para dependências npm e GitHub Actions. Atualizações major de npm estão ignoradas.
+
+## Limitações conhecidas
+
+- `npm run typecheck` está definido no `package.json`, mas ainda não há `tsconfig.json`; por isso, o comando não verifica os arquivos TypeScript.
+- O teste de validação da API de login está ignorado (`test.skip`).
+- Os snapshots visuais existentes são apenas para Chromium no Windows. Para comparar visualmente em outros projetos ou sistemas operacionais, é necessário gerar e revisar os snapshots correspondentes.
+- O alvo padrão é o Sauce Demo público; não há aplicação local ou servidor de desenvolvimento neste repositório.
 
 ## Relatórios e depuração
 
@@ -166,15 +188,9 @@ Para a action Dependency Review funcionar, habilite o **Dependency graph** nas c
 npm run report
 npx playwright show-trace caminho/para/trace.zip
 npx playwright test --debug --grep="login"
-npx playwright test --shard=1/2
-npx playwright test --shard=2/2
 ```
 
-Para combinar relatórios blob criados localmente:
-
-```bash
-npx playwright merge-reports --reporter=html blob-report
-```
+`npm run report:merge` só é útil quando existem relatórios blob; o workflow atual gera um único relatório HTML e não produz blobs.
 
 ## Referências
 

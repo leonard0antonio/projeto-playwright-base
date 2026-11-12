@@ -1,4 +1,4 @@
-# Playwright QA Automation Framework
+# playwright-e2e-saucedemo
 
 Framework de testes E2E para o [Sauce Demo](https://www.saucedemo.com), usando Playwright Test e GitHub Actions.
 

@@ -1,4 +1,4 @@
-# Testes Playwright
+# playwright-e2e-saucedemo
 
 Testes E2E do [Sauce Demo](https://www.saucedemo.com) com Playwright Test. A execução local e a pipeline do GitHub Actions usam Chromium.
 

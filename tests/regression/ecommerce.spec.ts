@@ -27,12 +27,9 @@ const PRODUCTS = {
   jacket: 'sauce-labs-fleece-jacket',
 };
 
-test.describe.configure({ retries: 2 });
-
 test.describe('Sauce Demo - E2E Flows', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
   });
 
   test.describe('Authentication @smoke @regression', () => {
@@ -281,7 +278,7 @@ test.describe('Mobile Tests @mobile', () => {
 
   test('Mobile hamburger menu @mobile @regression', async ({ page }) => {
     await page.click('#react-burger-menu-btn');
-    await expect(page.locator('.bm-menu')).toBeVisible();
+    await expect(page.locator('.bm-menu-wrap')).toHaveAttribute('aria-hidden', 'false');
     await page.click('[data-test="logout-sidebar-link"]');
     await expect(page).toHaveURL('/');
   });

@@ -28,7 +28,7 @@ jobs:
         run: npx playwright install chromium
 
       - name: Run Playwright tests
-        run: npx playwright test --project=chromium
+        run: npm test
         env:
           CI: true
 

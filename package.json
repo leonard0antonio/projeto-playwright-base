@@ -1,44 +1,22 @@
 {
   "name": "projeto-playwright-base",
   "version": "1.0.0",
-  "description": "Playwright test automation framework - Senior QA Pipeline",
-  "main": "index.js",
+  "description": "Testes E2E com Playwright para Sauce Demo",
   "scripts": {
     "test": "playwright test",
-    "test:headed": "playwright test --headed",
-    "test:debug": "playwright test --debug",
     "test:ui": "playwright test --ui",
-    "test:chromium": "playwright test --project=chromium",
-    "test:firefox": "playwright test --project=firefox",
-    "test:webkit": "playwright test --project=webkit",
-    "test:mobile": "playwright test --project='Mobile Chrome' --project='Mobile Safari'",
-    "test:visual": "playwright test --grep=@visual",
-    "test:performance": "playwright test --grep=@performance",
-    "test:ci": "playwright test --reporter=line,github,html",
-    "test:shard": "playwright test --shard=1/2",
-    "report": "playwright show-report",
-    "report:merge": "playwright merge-reports --reporter=html",
-    "lint": "eslint . --ext .ts,.js",
-    "lint:fix": "eslint . --ext .ts,.js --fix",
-    "typecheck": "tsc --noEmit",
-    "install:browsers": "playwright install --with-deps",
-    "clean": "rm -rf test-results playwright-report node_modules/.cache"
+    "report": "playwright show-report"
   },
   "keywords": [
     "playwright",
     "test-automation",
-    "e2e-testing",
-    "qa"
+    "e2e-testing"
   ],
-  "author": "",
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
     "@playwright/test": "^1.65.0",
-    "@types/node": "^26.6.6",
-    "eslint": "^8.57.0",
-    "@typescript-eslint/eslint-plugin": "^6.21.0",
-    "@typescript-eslint/parser": "^6.21.0"
+    "@types/node": "^26.6.6"
   },
   "engines": {
     "node": ">=20.0.0"

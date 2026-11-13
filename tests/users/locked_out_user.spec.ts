@@ -4,7 +4,7 @@ import { test, expect } from "@playwright/test";
 test.describe("Cenários de uso com locked_out_user", () => {
 
   test('Deve impedir o login e exibir mensagem de usuário bloqueado', async ({ page }) => {
-    await page.goto("https://www.saucedemo.com/");
+    await page.goto('/');
     await page.locator('[data-test="username"]').fill("locked_out_user");
     await page.locator('[data-test="password"]').fill("secret_sauce");
     await page.locator('[data-test="login-button"]').click();
